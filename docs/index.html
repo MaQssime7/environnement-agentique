@@ -200,7 +200,7 @@ const DEPOT = "https://github.com/MaQssime7/environnement-agentique/blob/main/sk
 const LIGNES = [
   { id: "construction", nom: "Construction", detail: "Du cadrage à la phase construite",
     traces: ["M360,420 H1100"], pointilles: ["M140,420 H360"], titre: [140, 520] },
-  { id: "qualite", nom: "Qualité", detail: "La boucle de chaque phase",
+  { id: "qualite", nom: "Qualité et sécurité", detail: "La boucle de chaque phase",
     traces: ["M1100,420 H1380 L1500,540 V600 L1380,720 H1220 L1100,600 Z"], titre: [1530, 470] },
   { id: "design", nom: "Outils de design", detail: "Palette, composants, écrans",
     traces: ["M600,420 V830"], titre: [470, 900] },
@@ -272,7 +272,7 @@ const STATIONS = [
     corps: [["Rôle", "Donne la documentation à jour des bibliothèques qui changent vite (Next.js, Supabase, Stripe, shadcn…)."],
             ["Règle", "Consultée avant tout usage nouveau d'une bibliothèque, ou quand une erreur pointe vers son API, une fois par sujet et par session. La connaissance d'un modèle a une date limite ; le risque est maximal quand il croit savoir."]] },
 
-  { id: "cherche-skill", l: "evolution", x: 140, y: 780, pos: "dessous", nom: "/cherche-skill", sous: "Un skill par projet", fichier: "cherche-skill",
+  { id: "cherche-skill", l: "evolution", x: 140, y: 780, pos: "dessous", nom: "/cherche-skill", sous: "Selon les besoins du projet", fichier: "cherche-skill",
     corps: [["Rôle", "Avant une tâche dans un domaine nouveau pour le projet (premier paiement, première authentification), cherche sur skills.sh un skill existant qui aiderait."],
             ["Propre à chaque projet", "Un skill trouvé s'installe dans le projet en cours, jamais pour tous les projets. Il est versionné avec le projet, avec sa provenance notée : chaque projet garde les skills dont il a besoin, et rien d'autre."],
             ["Sécurité", "Tous les fichiers sont lus avant de proposer l'installation : consignes qui lisent des secrets, appels réseau, texte caché, programme téléchargé puis exécuté. Un compteur d'installations gonflé se repère en le comparant aux étoiles du dépôt."]] },
