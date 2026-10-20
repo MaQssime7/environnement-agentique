@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Environnement agentique</title>
+<meta name="description" content="Le plan de travail avec lequel je construis une application de bout en bout avec Claude Code : skills, ordre, outils.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Cpath d=%22M3 16h26%22 stroke=%22%232346D8%22 stroke-width=%226%22 stroke-linecap=%22round%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%227%22 fill=%22white%22 stroke=%22%23141A26%22 stroke-width=%223%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&family=Overpass+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141a26;
+  --muted: #545d70;
+  --hair: #d3d9e3;
+  --dot: #c9d0dc;
+  --l-construction: #2346d8;
+  --l-qualite: #cf2c42;
+  --l-navigation: oklch(0.5325 0.1149 162.04);
+  --l-design: #7438d8;
+  --l-documentation: oklch(0.5472 0.1247 77.51);
+  --l-evolution: oklch(0.5469 0.0312 265.28);
+  --shadow: 0 1px 2px rgba(20, 26, 38, .06), 0 12px 32px rgba(20, 26, 38, .10);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1321; --surface: #161f33; --ink: #e8ecf4; --muted: #9aa4b8; --hair: #2a3550; --dot: #222c42;
+    --l-construction: #6b88ff; --l-qualite: #ff6276; --l-navigation: #2fc48d; --l-design: #a982ff;
+    --l-documentation: #f2b832; --l-evolution: #8f99ad;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px rgba(0, 0, 0, .45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1321; --surface: #161f33; --ink: #e8ecf4; --muted: #9aa4b8; --hair: #2a3550; --dot: #222c42;
+  --l-construction: #6b88ff; --l-qualite: #ff6276; --l-navigation: #2fc48d; --l-design: #a982ff;
+  --l-documentation: #f2b832; --l-evolution: #8f99ad;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px rgba(0, 0, 0, .45);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); overflow: hidden;
+  font: 16px/1.5 "Overpass", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased;
+}
+.cmd { font-family: "Overpass Mono", ui-monospace, Menlo, monospace; font-weight: 600; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--l-construction); outline-offset: 2px; }
+
+/* Panneau gauche : titre, lignes, principes */
+.guide {
+  position: fixed; z-index: 4; top: 16px; left: 16px; bottom: 16px; width: 340px;
+  background: var(--surface); border-radius: 20px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.guide-haut { padding: 26px 26px 18px; }
+.guide h1 { font-size: 34px; line-height: 1.02; font-weight: 800; letter-spacing: -.025em; margin: 0 0 12px; }
+.guide .intro { margin: 0; color: var(--muted); font-size: 15.5px; }
+.guide details { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.guide-defile { padding: 0 14px 18px; }
+.guide h2 { font-size: 15px; font-weight: 800; margin: 18px 12px 6px; }
+.liste { list-style: none; margin: 0; padding: 0; }
+.liste button {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  background: none; border: 0; border-radius: 10px; padding: 8px 12px; min-height: 44px; cursor: pointer;
+}
+.liste button:hover, .liste button[aria-pressed="true"] { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.barre { width: 30px; height: 8px; border-radius: 4px; flex: none; display: inline-block; }
+.liste .nom-ligne { font-weight: 600; line-height: 1.3; }
+.liste .detail { color: var(--muted); font-size: 14px; display: block; line-height: 1.3; }
+.num { width: 30px; height: 30px; flex: none; border-radius: 50%; border: 2.5px solid var(--ink); display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+.guide-bas { border-top: 1px solid var(--hair); padding: 14px 26px; font-size: 14.5px; margin-top: auto; }
+.guide-bas a { color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
+
+/* Commandes de la carte */
+.commandes { position: fixed; right: 16px; bottom: 16px; z-index: 4; display: flex; gap: 6px; background: var(--surface); padding: 6px; border-radius: 14px; box-shadow: var(--shadow); }
+.commandes button { min-width: 44px; min-height: 44px; border: 0; border-radius: 10px; background: none; cursor: pointer; font-size: 18px; padding: 0 12px; }
+.commandes button:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.commandes .texte { font-size: 15px; font-weight: 600; }
+
+/* Carte */
+svg#carte { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; display: block; }
+svg#carte.glisse { cursor: grabbing; }
+.trace { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.trace.gaine { stroke: var(--bg); stroke-width: 22; }
+.trace.ligne { stroke-width: 12; }
+.trace.facultatif { stroke-dasharray: 2 16; }
+.ligne-titre { font-weight: 800; font-size: 22px; }
+.station { cursor: pointer; }
+.station .cible { fill: transparent; }
+.station .rond { fill: var(--surface); stroke-width: 6; }
+.station.correspondance .rond { stroke: var(--ink); }
+.station.facultative .rond { stroke-dasharray: 4 5; }
+.station .nom { font: 600 21px "Overpass Mono", ui-monospace, monospace; fill: var(--ink); }
+.station .sous { font: 400 18px "Overpass", sans-serif; fill: var(--muted); }
+.station:hover .rond { stroke-width: 9; }
+.station:focus { outline: none; }
+.station:focus-visible .anneau { stroke: var(--l-construction); stroke-width: 3; }
+.anneau { fill: none; stroke: transparent; }
+.station.choisie .rond { stroke-width: 10; }
+.note { font: italic 400 17px "Overpass", sans-serif; fill: var(--muted); }
+#monde .station, #monde .trace, #monde text { transition: opacity .2s; }
+#monde .terne { opacity: .14; }
+
+/* Fiche d'une station */
+.fiche {
+  position: fixed; z-index: 5; top: 16px; right: 16px; bottom: 88px; width: min(430px, calc(100vw - 32px));
+  background: var(--surface); border-radius: 20px; box-shadow: var(--shadow);
+  overflow-y: auto; padding: 24px 26px 28px; visibility: hidden; opacity: 0; transform: translateX(24px);
+  transition: opacity .2s, transform .25s ease-out, visibility 0s .25s;
+}
+.fiche.ouverte { visibility: visible; opacity: 1; transform: none; transition: opacity .2s, transform .25s ease-out; }
+.fiche .ligne-de { display: flex; align-items: center; gap: 10px; font-size: 14.5px; font-weight: 600; color: var(--muted); margin-right: 52px; }
+.fiche h2 { font-size: 30px; line-height: 1.1; font-weight: 800; letter-spacing: -.02em; margin: 10px 0 4px; }
+.fiche .commande { margin: 0 0 6px; font-size: 17px; color: var(--muted); }
+.fiche h3 { font-size: 15px; font-weight: 800; margin: 20px 0 4px; }
+.fiche p { margin: 0; max-width: 62ch; }
+.fiche .relies { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.fiche .relies button { border: 1.5px solid var(--hair); background: none; border-radius: 999px; padding: 6px 14px; min-height: 40px; cursor: pointer; font-size: 15px; }
+.fiche .relies button:hover { border-color: var(--ink); }
+.fiche .source { display: inline-block; margin-top: 22px; font-weight: 600; color: var(--ink); text-underline-offset: 4px; }
+.fiche .fermer { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: color-mix(in srgb, var(--ink) 6%, transparent); cursor: pointer; font-size: 18px; }
+.fiche .fermer:hover { background: color-mix(in srgb, var(--ink) 12%, transparent); }
+
+@media (max-width: 760px) {
+  .guide { bottom: auto; right: 16px; width: auto; max-height: calc(100vh - 32px); }
+  .guide-haut { padding: 18px 20px 6px; }
+  .guide h1 { font-size: 26px; margin-bottom: 6px; }
+  .guide .intro { font-size: 14.5px; }
+  .guide details > summary { cursor: pointer; font-weight: 600; padding: 8px 20px 14px; list-style: none; }
+  .guide details > summary::-webkit-details-marker { display: none; }
+  .guide details > summary::before { content: "+ "; font-weight: 800; }
+  .guide details[open] > summary::before { content: "− "; }
+  .guide details:not([open]) ~ .guide-bas { display: none; }
+  .guide-bas { padding: 12px 20px; }
+  .fiche { top: auto; left: 16px; right: 16px; bottom: 16px; width: auto; max-height: 64vh; transform: translateY(24px); }
+  .fiche.ouverte ~ .commandes { display: none; }
+}
+@media (min-width: 761px) { .guide details > summary { display: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+
+<svg id="carte" role="application" aria-label="Plan de l'environnement de travail. Tab pour parcourir les stations, Entrée pour ouvrir une fiche.">
+  <defs>
+    <pattern id="points" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.6" fill="var(--dot)"/></pattern>
+  </defs>
+  <g id="monde">
+    <rect x="-4000" y="-4000" width="10000" height="10000" fill="url(#points)"/>
+    <g id="gaines"></g>
+    <g id="lignes"></g>
+    <g id="notes"></g>
+    <g id="stations"></g>
+  </g>
+</svg>
+
+<nav class="guide" aria-label="Lignes et principes">
+  <div class="guide-haut">
+    <h1>Environnement agentique</h1>
+    <p class="intro">Comment je construis une application de bout en bout avec Claude Code. Chaque ligne est une partie du travail, chaque station un skill ou un outil. Cliquez une station pour lire sa fiche.</p>
+  </div>
+  <details id="plus" open>
+    <summary>Lignes et principes</summary>
+    <div class="guide-defile">
+      <h2>Les lignes</h2>
+      <ul class="liste" id="liste-lignes"></ul>
+      <h2>Les principes</h2>
+      <ul class="liste" id="liste-principes"></ul>
+    </div>
+  </details>
+  <div class="guide-bas"><a href="https://github.com/MaQssime7/environnement-agentique" target="_blank" rel="noopener">Lire les skills sur GitHub</a></div>
+</nav>
+
+<aside class="fiche" id="fiche" role="dialog" aria-modal="false" aria-labelledby="f-titre">
+  <button class="fermer" type="button" aria-label="Fermer la fiche">✕</button>
+  <div class="ligne-de" id="f-ligne"></div>
+  <h2 id="f-titre"></h2>
+  <p class="commande cmd" id="f-cmd"></p>
+  <div id="f-corps"></div>
+  <div id="f-bloc-relies"><h3>En correspondance</h3><div class="relies" id="f-relies"></div></div>
+  <a class="source" id="f-source" target="_blank" rel="noopener"></a>
+</aside>
+
+<div class="commandes">
+  <button type="button" id="z-moins" aria-label="Dézoomer">−</button>
+  <button type="button" id="z-plus" aria-label="Zoomer">+</button>
+  <button type="button" id="z-tout" class="texte">Tout voir</button>
+  <button type="button" id="theme" aria-label="Basculer entre mode clair et mode sombre">◐</button>
+</div>
+
+<script>
+const DEPOT = "https://github.com/MaQssime7/environnement-agentique/blob/main/skills/";
+
+const LIGNES = [
+  { id: "construction", nom: "Construction", detail: "Du cadrage à la phase construite",
+    traces: ["M360,420 H1100"], pointilles: ["M140,420 H360"], titre: [140, 520] },
+  { id: "qualite", nom: "Qualité", detail: "La boucle de chaque phase",
+    traces: ["M1100,420 H1380 L1500,540 V600 L1380,720 H1220 L1100,600 Z"], titre: [1530, 470] },
+  { id: "design", nom: "Outils de design", detail: "Palette, composants, écrans",
+    traces: ["M600,420 V830"], titre: [470, 900] },
+  { id: "navigation", nom: "Outils de navigation", detail: "Regarder l'app et le web",
+    traces: ["M1100,420 V260 L980,140 H500"], titre: [500, 236] },
+  { id: "documentation", nom: "Documentation", detail: "Les bibliothèques à jour",
+    traces: ["M1100,420 L1220,300 H1330"], titre: [1250, 250] },
+  { id: "evolution", nom: "Faire évoluer l'environnement", detail: "Nouveaux skills, changement d'agent",
+    traces: ["M140,780 H420"], titre: [120, 730] },
+];
+
+const STATIONS = [
+  { id: "interroge", l: "construction", x: 140, y: 420, type: "facultative", pos: "dessus", nom: "/interroge", sous: "Faire mûrir une idée", fichier: "interroge",
+    corps: [["Rôle", "Une question à la fois, chacune avec une recommandation justifiée, jusqu'à une compréhension partagée de l'idée."],
+            ["Quand", "Facultatif : avant /cadre, quand l'idée est encore floue."],
+            ["Produit", "Rien d'écrit : une idée assez claire pour être cadrée."]] },
+  { id: "cadre", l: "construction", x: 360, y: 420, pos: "dessus", nom: "/cadre", sous: "Le PRD", fichier: "cadre",
+    corps: [["Rôle", "Crée le dossier du projet (nom valide partout, git, secrets exclus avant d'exister), puis interroge sur le problème, l'utilisateur, les plateformes, la solution, les critères de succès et le hors périmètre."],
+            ["Produit", "docs/PRD.md en dix sections, et un bloc dans le CLAUDE.md du projet : le hors périmètre y devient opposable, une demande qui tombe dedans est signalée avant d'être satisfaite."],
+            ["Le point fort", "La question des évolutions prévues : qu'est-ce qui coûtera cher à rattraper si on ne le prépare pas maintenant ? Elle traque quatre décisions irréversibles prises par défaut : une donnée non capturée, une structure de stockage, un identifiant instable, une plateforme ajoutée plus tard."]] },
+  { id: "design", l: "construction", x: 600, y: 420, type: "correspondance", pos: "dessus", nom: "/design", sous: "Système et écrans", fichier: "design",
+    corps: [["Rôle", "Adapte le système de design à la plateforme (site, application web, Mac, Windows, iOS, Android). La palette est choisie en direct sur tweakcn, ses contrastes corrigés par script, puis les écrans sont proposés tout faits."],
+            ["Comment", "L'IA cherche les meilleurs composants existants, les assemble en écrans complets et en propose trois variantes sur le canevas. L'humain juge des écrans entiers, jamais des composants un par un, et on itère."],
+            ["Produit", "docs/DESIGN.md, les jetons au format de la plateforme, les écrans validés et la liste des composants utilisés. Un carnet de goût garde ce qui a plu ou déplu d'un projet à l'autre."],
+            ["Un constat qui a donné un script", "Aucun des 42 thèmes de tweakcn n'est accessible tel quel. Le script mesure douze paires de couleurs en clair et en sombre, et corrige la seule luminosité, teinte conservée."]] },
+  { id: "planifie", l: "construction", x: 840, y: 420, pos: "dessus", nom: "/planifie", sous: "Le plan", fichier: "planifie",
+    corps: [["Rôle", "Tranche seul l'architecture (stack, schéma de données, autorisation, secrets), puis découpe le PRD en tranches verticales : chaque phase traverse toutes les couches et se montre seule."],
+            ["Produit", "docs/PLAN.md : critères d'acceptation, dont les cinq états de chaque écran (vide, chargement, erreur, débordé, action en cours), contenu de test réaliste et parcours de régression cumulatifs."],
+            ["Le point de contrôle humain", "Un compte rendu court à la fin : chaque décision, pourquoi, ce que coûterait d'en changer plus tard, ce qui coûtera de l'argent. Rien n'est encore installé, contester coûte une ligne."]] },
+  { id: "construction", l: "construction", x: 1100, y: 420, type: "correspondance", grande: true, pos: "basgauche", nom: "phase n", sous: "Construction",
+    corps: [["Rôle", "L'IA construit la phase du plan. Chaque écran est ouvert et regardé dès qu'il existe : 375 px de large, mode sombre, états, console sans erreur."],
+            ["Règles qui s'appliquent", "Documentation vérifiée avant tout usage nouveau d'une bibliothèque. Composants assemblés à partir de ceux nommés dans DESIGN.md avant d'en écrire un nouveau. Tout serveur ou navigateur lancé est arrêté avant de rendre la main."],
+            ["Ensuite", "La boucle qualité : /code-review après chaque gros bloc, /investigue dès qu'un bug apparaît, /cloture quand la phase est finie, puis phase suivante."]] },
+
+  { id: "code-review", l: "qualite", x: 1260, y: 420, pos: "dessus", nom: "/code-review", sous: "Relecture", lien: "https://docs.claude.com/en/docs/claude-code", lienTexte: "Commande intégrée à Claude Code",
+    corps: [["Rôle", "Relit le changement en cours et cherche ce qui pourrait casser : défauts de comportement, de sécurité, de performance."],
+            ["Quand", "Après chaque gros bloc : une fonctionnalité conséquente, du code qui lit ou écrit en base, gère un accès ou un paiement."],
+            ["Produit", "Des constats classés par gravité, rapportés sans filtre avant d'annoncer que c'est terminé."]] },
+  { id: "investigue", l: "qualite", x: 1500, y: 570, pos: "droite", nom: "/investigue", sous: "Bug", fichier: "investigue",
+    corps: [["Rôle", "Part d'un symptôme et remonte à sa cause : reproduire, prouver la cause par une observation, corriger au plus court, rejouer le scénario, retirer toute trace de débogage."],
+            ["Autonomie", "Aucune question technique à l'humain. Un seul arrêt : avant un correctif qui ne se défait pas d'un retour en arrière du code (données réelles, droits d'accès, paiement)."],
+            ["Différence avec /code-review", "/code-review cherche ce qui pourrait casser dans un changement ; /investigue part de ce qui est déjà cassé. Sa preuve, c'est le symptôme rejoué qui a disparu."]] },
+  { id: "cloture", l: "qualite", x: 1300, y: 720, pos: "dessous", nom: "/cloture", sous: "Fin de phase", fichier: "cloture",
+    corps: [["Rôle", "Vérifie qu'une phase est réellement finie : critères d'acceptation repris un par un avec leur preuve, app regardée sur mobile et bureau, en clair et en sombre, avec un contenu réaliste."],
+            ["Sécurité", "Test des deux comptes : une ressource du compte A ne doit jamais s'ouvrir avec le compte B. Un échec bloque la clôture. Puis secrets, revue de code et parcours de régression de toutes les phases précédentes."],
+            ["Produit", "Un rapport en trois parties jamais mélangées (vérifié, non vérifié, cassé), puis les traces : plan coché, parcours ajoutés, commit proposé."]] },
+
+  { id: "tweakcn", l: "design", x: 600, y: 570, pos: "droite", nom: "tweakcn", sous: "Choisir la palette", lien: "https://tweakcn.com", lienTexte: "tweakcn.com",
+    corps: [["Rôle", "Éditeur de thèmes qui montre une palette en direct sur de vrais composants (cartes, tableau de bord, formulaires), en clair et en sombre. C'est là que l'humain choisit."],
+            ["Avec /design", "Chaque thème se lit par adresse : /design le récupère, mesure ses contrastes et le corrige."]] },
+  { id: "shadcn", l: "design", x: 600, y: 700, pos: "droite", nom: "shadcn", sous: "Composants existants", lien: "https://ui.shadcn.com/blocks", lienTexte: "ui.shadcn.com",
+    corps: [["Rôle", "Les composants et blocs officiels (tableaux de bord, barres latérales, connexion…) et l'index de près de 480 bibliothèques communautaires."],
+            ["Avec /design", "Recherche et lecture du code d'un bloc sans rien installer. Le classement de l'index mesure la santé technique d'une bibliothèque, pas la qualité de son design : il sert à écarter, jamais à choisir."]] },
+  { id: "canevas", l: "design", x: 600, y: 830, pos: "droite", nom: "Canevas Design", sous: "Écrans à commenter",
+    corps: [["Rôle", "Le canevas Design de Claude : plusieurs écrans posés côte à côte sur une page privée, qu'on ouvre, commente et partage. Il joue le rôle de Figma."],
+            ["Limite", "Il dessine en HTML : les composants y sont reproduits d'après leur code, pas exécutés. Les décisions prises dessus sont toujours reportées dans DESIGN.md."]] },
+
+  { id: "playwright", l: "navigation", x: 1100, y: 290, pos: "gauche", nom: "Playwright", sous: "Regarder l'app", lien: "https://playwright.dev", lienTexte: "playwright.dev",
+    corps: [["Rôle", "Un navigateur vierge, sans compte, que l'IA pilote pour regarder l'app qu'elle construit : rendu à 375 px et sur bureau, mode sombre, états, console."],
+            ["Règle", "Uniquement pour notre propre app en local. Fermé après chaque vérification."]] },
+  { id: "chrome", l: "navigation", x: 790, y: 140, pos: "dessus", nom: "Claude in Chrome", sous: "Les vrais sites", lien: "https://claude.com/chrome", lienTexte: "Claude in Chrome",
+    corps: [["Rôle", "Le vrai navigateur de l'utilisateur, avec ses sessions : lire un site, agir dans un tableau de bord ou une console d'hébergement, regarder les aperçus de composants pendant /design."],
+            ["Règle", "Tout ce qui n'est pas notre app locale passe par lui."]] },
+  { id: "computer", l: "navigation", x: 500, y: 140, pos: "dessus", nom: "Computer use", sous: "Les apps du Mac", lien: "https://docs.claude.com/en/docs/agents-and-tools/tool-use/computer-use-tool", lienTexte: "Documentation computer use",
+    corps: [["Rôle", "Prend des captures d'écran du Mac et pilote ses applications (Finder, réglages, apps natives) au clavier et à la souris."],
+            ["Règle", "En dernier recours, quand ni un outil dédié ni le navigateur ne conviennent."]] },
+
+  { id: "context7", l: "documentation", x: 1330, y: 300, pos: "droite", nom: "Context7", sous: "Doc à jour", lien: "https://context7.com", lienTexte: "context7.com",
+    corps: [["Rôle", "Donne la documentation à jour des bibliothèques qui changent vite (Next.js, Supabase, Stripe, shadcn…)."],
+            ["Règle", "Consultée avant tout usage nouveau d'une bibliothèque, ou quand une erreur pointe vers son API, une fois par sujet et par session. La connaissance d'un modèle a une date limite ; le risque est maximal quand il croit savoir."]] },
+
+  { id: "cherche-skill", l: "evolution", x: 140, y: 780, pos: "dessous", nom: "/cherche-skill", sous: "Un skill par projet", fichier: "cherche-skill",
+    corps: [["Rôle", "Avant une tâche dans un domaine nouveau pour le projet (premier paiement, première authentification), cherche sur skills.sh un skill existant qui aiderait."],
+            ["Propre à chaque projet", "Un skill trouvé s'installe dans le projet en cours, jamais pour tous les projets. Il est versionné avec le projet, avec sa provenance notée : chaque projet garde les skills dont il a besoin, et rien d'autre."],
+            ["Sécurité", "Tous les fichiers sont lus avant de proposer l'installation : consignes qui lisent des secrets, appels réseau, texte caché, programme téléchargé puis exécuté. Un compteur d'installations gonflé se repère en le comparant aux étoiles du dépôt."]] },
+  { id: "passation", l: "evolution", x: 420, y: 780, pos: "dessous", nom: "/passation", sous: "Changer d'agent", fichier: "passation",
+    corps: [["Rôle", "Passer la main entre Claude Code et Codex sur un même dépôt, ou reprendre après l'autre."],
+            ["Principe", "Aucun contexte de conversation ne traverse la bascule : le dépôt est le seul canal. En sortie, rien de non commité sans explication et les décisions écrites ; en entrée, lire l'état réel avant d'écrire quoi que ce soit."],
+            ["Quand", "Uniquement sur demande explicite."]] },
+];
+
+const PRINCIPES = [
+  { id: "p-roles", titre: "L'humain tranche le produit, l'IA le technique",
+    corps: [["Ce que ça veut dire", "L'humain décide de l'usage, du coût, du visuel et de tout ce qui est irréversible. L'IA tranche le reste (stack, schéma, hypothèses de bug) et explique son choix en une phrase."],
+            ["Pourquoi", "Faire valider un choix qu'on ne peut pas évaluer ne protège de rien et ralentit tout. Les points d'arrêt sont placés là où une décision coûte cher à défaire, nulle part ailleurs."]] },
+  { id: "p-preuve", titre: "Rien n'est fini sans preuve",
+    corps: [["Ce que ça veut dire", "Du code est terminé quand il a été lancé, un écran quand il a été regardé. Chaque compte rendu sépare ce qui est vérifié, ce qui ne l'est pas et pourquoi, et ce qui est cassé."],
+            ["Pourquoi", "Sans relecture humaine du code, l'IA est le seul contrôle qualité. « Je n'ai pas pu vérifier X » est une réponse acceptable ; laisser croire que c'est vérifié ne l'est jamais."]] },
+  { id: "p-exigences", titre: "Des exigences, pas des recettes",
+    corps: [["Ce que ça veut dire", "Un skill dit ce qui doit être vrai à la fin, rarement comment y arriver. Trois couches : le contexte (ce que l'IA ne peut pas deviner), les exigences (ce qui doit être prouvé), les recettes (le comment, réduit au minimum)."],
+            ["Pourquoi", "Les modèles progressent vite. Le contexte et les exigences gardent leur valeur ; une recette pas à pas finit par brider un modèle qui saurait mieux faire."]] },
+  { id: "p-securite", titre: "La sécurité signalée d'office",
+    corps: [["Ce que ça veut dire", "Secrets en clair, données lisibles par le mauvais compte, contrôle fait seulement dans le navigateur, bugs silencieux : l'IA les signale sans qu'on le lui demande, avec le risque concret."],
+            ["Pourquoi", "Personne ne repassera derrière. « Ta clé part sur GitHub au prochain envoi » se corrige ; « pense à sécuriser » s'ignore."]] },
+  { id: "p-memoire", titre: "Le dépôt comme seule mémoire",
+    corps: [["Ce que ça veut dire", "Chaque décision finit dans un document versionné : PRD, DESIGN, PLAN. Le CLAUDE.md du projet est une carte qui pointe vers eux, pas une copie."],
+            ["Pourquoi", "Une conversation se perd, un agent ne se souvient pas de la séance précédente. Ce qui n'est pas écrit sur disque n'existe pas pour le suivant."]] },
+];
+
+// Stations reliées par une ligne ou par un usage
+const RELIES = {
+  interroge: ["cadre"], cadre: ["interroge", "design"], design: ["cadre", "planifie", "tweakcn", "shadcn", "canevas", "chrome"],
+  planifie: ["design", "construction"], construction: ["planifie", "code-review", "investigue", "cloture", "playwright", "context7"],
+  "code-review": ["construction", "cloture"], investigue: ["construction"], cloture: ["construction", "playwright", "code-review"],
+  tweakcn: ["design"], shadcn: ["design"], canevas: ["design"],
+  playwright: ["construction", "cloture"], chrome: ["design", "cherche-skill"], computer: ["construction"],
+  context7: ["construction"], "cherche-skill": ["chrome"], passation: ["construction"],
+};
+// La station de la ligne Construction où chaque ligne se branche
+const BRANCHE = { design: "design", qualite: "construction", navigation: "construction", documentation: "construction" };
+
+const NS = "http://www.w3.org/2000/svg";
+const el = (t, a = {}, parent) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (parent) parent.appendChild(e); return e; };
+const couleur = id => `var(--l-${id})`;
+const ligneDe = Object.fromEntries(LIGNES.map(l => [l.id, l]));
+const stationDe = Object.fromEntries(STATIONS.map(s => [s.id, s]));
+
+// Tracés, avec une gaine couleur du fond pour que les croisements restent lisibles
+const gG = document.getElementById("gaines"), gL = document.getElementById("lignes"), gN = document.getElementById("notes");
+const tracesDe = {};
+for (const l of LIGNES) {
+  tracesDe[l.id] = [];
+  for (const d of [...l.traces, ...(l.pointilles || [])]) el("path", { class: "trace gaine", d }, gG);
+  for (const d of l.traces) tracesDe[l.id].push(el("path", { class: "trace ligne", d, stroke: couleur(l.id) }, gL));
+  for (const d of l.pointilles || []) tracesDe[l.id].push(el("path", { class: "trace ligne facultatif", d, stroke: couleur(l.id) }, gL));
+  const t = el("text", { class: "ligne-titre", x: l.titre[0], y: l.titre[1], fill: couleur(l.id) }, gN); t.textContent = l.nom;
+  tracesDe[l.id].push(t);
+}
+const retour = el("text", { class: "note", x: 1084, y: 690, "text-anchor": "end" }, gN); retour.textContent = "phase suivante";
+tracesDe.qualite.push(retour);
+
+// Stations
+const gS = document.getElementById("stations"), stationEl = {};
+for (const s of STATIONS) {
+  const g = el("g", { class: `station ${s.type || ""}`, transform: `translate(${s.x},${s.y})`, tabindex: "0", role: "button",
+    "aria-label": `${s.nom}, ${s.sous}. Ouvrir la fiche.` }, gS);
+  const r = s.grande ? 24 : s.type === "correspondance" ? 19 : 15;
+  el("circle", { class: "cible", r: 46 }, g);
+  el("circle", { class: "anneau", r: r + 9 }, g);
+  const rond = el("circle", { class: "rond", r }, g);
+  if (s.type !== "correspondance") rond.setAttribute("stroke", couleur(s.l));
+  const ancre = { dessus: "middle", dessous: "middle", gauche: "end", droite: "start", basgauche: "end" }[s.pos];
+  const [dx, dy1, dy2] = { dessus: [0, -r - 44, -r - 18], dessous: [0, r + 34, r + 60], gauche: [-r - 18, -6, 20], droite: [r + 18, -6, 20], basgauche: [-r - 10, r + 36, r + 62] }[s.pos];
+  el("text", { class: "nom", x: dx, y: dy1, "text-anchor": ancre }, g).textContent = s.nom;
+  el("text", { class: "sous", x: dx, y: dy2, "text-anchor": ancre }, g).textContent = s.sous;
+  stationEl[s.id] = g;
+  g.addEventListener("click", () => { if (!aGlisse) ouvrir(s.id); });
+  g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ouvrir(s.id); } });
+  g.addEventListener("focus", () => { const b = g.getBoundingClientRect(); if (b.left < 0 || b.top < 0 || b.right > innerWidth || b.bottom > innerHeight) centrerSur(s); });
+}
+
+function estomper(stations, lignes) {
+  for (const s of STATIONS) stationEl[s.id].classList.toggle("terne", !!stations && !stations.has(s.id));
+  for (const l of LIGNES) for (const e of tracesDe[l.id]) e.classList.toggle("terne", !!lignes && !lignes.has(l.id));
+}
+
+// Panneau gauche : les lignes (cliquer isole une ligne) et les principes
+const listeL = document.getElementById("liste-lignes");
+let ligneIsolee = null;
+for (const l of LIGNES) {
+  const li = document.createElement("li"); const b = document.createElement("button");
+  b.type = "button"; b.setAttribute("aria-pressed", "false");
+  const barre = document.createElement("span"); barre.className = "barre"; barre.style.background = couleur(l.id);
+  const t = document.createElement("span");
+  const n = document.createElement("span"); n.className = "nom-ligne"; n.textContent = l.nom;
+  const d = document.createElement("span"); d.className = "detail"; d.textContent = l.detail;
+  t.append(n, d); b.append(barre, t); li.append(b); listeL.append(li);
+  b.addEventListener("click", () => {
+    fermer(false);
+    ligneIsolee = ligneIsolee === l.id ? null : l.id;
+    listeL.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", "false"));
+    if (!ligneIsolee) return estomper(null, null);
+    b.setAttribute("aria-pressed", "true");
+    const ids = STATIONS.filter(s => s.l === l.id).map(s => s.id);
+    if (BRANCHE[l.id]) ids.push(BRANCHE[l.id]);
+    estomper(new Set(ids), new Set([l.id]));
+  });
+}
+const listeP = document.getElementById("liste-principes");
+PRINCIPES.forEach((p, i) => {
+  const li = document.createElement("li"); const b = document.createElement("button"); b.type = "button";
+  const num = document.createElement("span"); num.className = "num"; num.textContent = i + 1;
+  const t = document.createElement("span"); t.className = "nom-ligne"; t.textContent = p.titre;
+  b.append(num, t); li.append(b); listeP.append(li);
+  b.addEventListener("click", () => ouvrirPrincipe(p, b));
+});
+
+// Fiche
+const fiche = document.getElementById("fiche");
+let retourFocus = null;
+function remplir({ ligne, titre, cmd, corps, relies, source, sourceTexte }) {
+  const fl = document.getElementById("f-ligne"); fl.replaceChildren();
+  if (ligne) { const b = document.createElement("span"); b.className = "barre"; b.style.background = couleur(ligne); fl.append(b, document.createTextNode("Ligne " + ligneDe[ligne].nom)); }
+  else fl.textContent = "Principe";
+  document.getElementById("f-titre").textContent = titre;
+  const c = document.getElementById("f-cmd"); c.textContent = cmd || ""; c.hidden = !cmd;
+  const fc = document.getElementById("f-corps"); fc.replaceChildren();
+  for (const [h, t] of corps) { const h3 = document.createElement("h3"); h3.textContent = h; const p = document.createElement("p"); p.textContent = t; fc.append(h3, p); }
+  const fr = document.getElementById("f-relies"); fr.replaceChildren();
+  document.getElementById("f-bloc-relies").hidden = !(relies && relies.length);
+  for (const id of relies || []) {
+    const s = stationDe[id]; const b = document.createElement("button"); b.type = "button"; b.textContent = s.nom;
+    b.addEventListener("click", () => { ouvrir(id); centrerSur(s); }); fr.append(b);
+  }
+  const src = document.getElementById("f-source"); src.hidden = !source;
+  if (source) { src.href = source; src.textContent = sourceTexte; }
+  fiche.classList.add("ouverte"); fiche.scrollTop = 0;
+  fiche.querySelector(".fermer").focus({ preventScroll: true });
+}
+function ouvrir(id) {
+  const s = stationDe[id]; retourFocus = stationEl[id]; ligneIsolee = null;
+  listeL.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", "false"));
+  for (const x of STATIONS) stationEl[x.id].classList.toggle("choisie", x.id === id);
+  const voisins = [id, ...(RELIES[id] || [])];
+  estomper(new Set(voisins), new Set(voisins.map(v => stationDe[v].l)));
+  remplir({ ligne: s.l, titre: s.sous, cmd: s.nom, corps: s.corps, relies: RELIES[id],
+    source: s.fichier ? DEPOT + s.fichier + "/SKILL.md" : s.lien, sourceTexte: s.fichier ? "Lire le skill complet sur GitHub" : s.lienTexte });
+}
+function ouvrirPrincipe(p, bouton) {
+  retourFocus = bouton; estomper(null, null);
+  for (const x of STATIONS) stationEl[x.id].classList.remove("choisie");
+  remplir({ titre: p.titre, corps: p.corps });
+}
+function fermer(rendreFocus = true) {
+  fiche.classList.remove("ouverte"); estomper(null, null);
+  for (const x of STATIONS) stationEl[x.id].classList.remove("choisie");
+  if (rendreFocus && retourFocus) retourFocus.focus({ preventScroll: true });
+}
+fiche.querySelector(".fermer").addEventListener("click", () => fermer());
+document.addEventListener("keydown", e => { if (e.key === "Escape" && fiche.classList.contains("ouverte")) fermer(); });
+
+// Déplacement et zoom
+const svg = document.getElementById("carte"), monde = document.getElementById("monde");
+const CADRE = { x: 40, y: 40, w: 1720, h: 900 };   // l'étendue utile du plan
+let vue = { x: 0, y: 0, k: 1 };
+const appliquer = () => monde.setAttribute("transform", `translate(${vue.x},${vue.y}) scale(${vue.k})`);
+const borneK = k => Math.min(3, Math.max(0.2, k));
+function zoomerEn(px, py, f) { const k = borneK(vue.k * f), r = k / vue.k; vue.x = px - (px - vue.x) * r; vue.y = py - (py - vue.y) * r; vue.k = k; appliquer(); }
+function zoneLibre() {
+  const g = document.querySelector(".guide").getBoundingClientRect();
+  return innerWidth > 760 ? { x: g.right + 8, y: 8, w: innerWidth - g.right - 24, h: innerHeight - 96 }
+                          : { x: 8, y: g.bottom + 8, w: innerWidth - 16, h: innerHeight - g.bottom - 96 };
+}
+function toutVoir(ensemble = false) {
+  const z = zoneLibre();
+  let k = borneK(Math.min(z.w / CADRE.w, z.h / CADRE.h));
+  if (!ensemble && k < 0.36) {
+    // Petit écran : on part du début de la ligne principale, à une taille où les stations se touchent au doigt
+    k = 0.36; vue = { k, x: z.x + 12 - 40 * k, y: z.y + 10 - 60 * k }; return appliquer();
+  }
+  vue = { k, x: z.x + (z.w - CADRE.w * k) / 2 - CADRE.x * k, y: z.y + (z.h - CADRE.h * k) / 2 - CADRE.y * k }; appliquer();
+}
+function centrerSur(s) {
+  const large = innerWidth > 760;
+  const cx = large ? (document.querySelector(".guide").getBoundingClientRect().right + innerWidth - 460) / 2 : innerWidth / 2;
+  const cy = large ? innerHeight / 2 : innerHeight * 0.2;
+  vue.x = cx - s.x * vue.k; vue.y = cy - s.y * vue.k; appliquer();
+}
+svg.addEventListener("wheel", e => { e.preventDefault(); zoomerEn(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+const pointeurs = new Map(); let depart = null, aGlisse = false, pince = null;
+svg.addEventListener("pointerdown", e => {
+  pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointeurs.size === 1) { depart = { x: e.clientX, y: e.clientY, vx: vue.x, vy: vue.y }; aGlisse = false; }
+  if (pointeurs.size === 2) { const [a, b] = [...pointeurs.values()]; pince = { d: Math.hypot(a.x - b.x, a.y - b.y), k: vue.k }; }
+});
+svg.addEventListener("pointermove", e => {
+  if (!pointeurs.has(e.pointerId)) return;
+  pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointeurs.size === 2 && pince) {
+    const [a, b] = [...pointeurs.values()];
+    zoomerEn((a.x + b.x) / 2, (a.y + b.y) / 2, borneK(pince.k * Math.hypot(a.x - b.x, a.y - b.y) / pince.d) / vue.k); aGlisse = true; return;
+  }
+  if (depart) {
+    const dx = e.clientX - depart.x, dy = e.clientY - depart.y;
+    if (!aGlisse && Math.hypot(dx, dy) > 6) { aGlisse = true; svg.setPointerCapture(e.pointerId); svg.classList.add("glisse"); }
+    if (aGlisse) { vue.x = depart.vx + dx; vue.y = depart.vy + dy; appliquer(); }
+  }
+});
+const fin = e => {
+  pointeurs.delete(e.pointerId); if (pointeurs.size < 2) pince = null;
+  if (!pointeurs.size) { depart = null; svg.classList.remove("glisse"); setTimeout(() => { aGlisse = false; }, 0); }
+};
+svg.addEventListener("pointerup", fin); svg.addEventListener("pointercancel", fin);
+document.getElementById("z-plus").addEventListener("click", () => zoomerEn(innerWidth / 2, innerHeight / 2, 1.3));
+document.getElementById("z-moins").addEventListener("click", () => zoomerEn(innerWidth / 2, innerHeight / 2, 1 / 1.3));
+document.getElementById("z-tout").addEventListener("click", () => toutVoir(true));
+document.getElementById("theme").addEventListener("click", () => {
+  const r = document.documentElement;
+  const sombre = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = sombre ? "light" : "dark";
+});
+
+if (innerWidth <= 760) document.getElementById("plus").open = false;
+document.getElementById("plus").addEventListener("toggle", () => toutVoir());
+addEventListener("resize", () => toutVoir());
+toutVoir();
+if (document.fonts) document.fonts.ready.then(() => toutVoir());
+</script>
+</body>
+</html>
