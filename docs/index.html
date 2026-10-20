@@ -474,17 +474,27 @@ function centrerSur(s) {
 }
 svg.addEventListener("wheel", e => { e.preventDefault(); zoomerEn(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
 const pointeurs = new Map(); let depart = null, aGlisse = false, pince = null;
+// Chaque fois qu'un doigt se pose ou se lève, le geste repart de la vue actuelle (sinon la carte saute)
+function reprendre() {
+  const [a, b] = [...pointeurs.values()];
+  depart = pointeurs.size === 1 ? { x: a.x, y: a.y, vx: vue.x, vy: vue.y } : null;
+  pince = pointeurs.size === 2 ? { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 } : null;
+}
 svg.addEventListener("pointerdown", e => {
   pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (pointeurs.size === 1) { depart = { x: e.clientX, y: e.clientY, vx: vue.x, vy: vue.y }; aGlisse = false; }
-  if (pointeurs.size === 2) { const [a, b] = [...pointeurs.values()]; pince = { d: Math.hypot(a.x - b.x, a.y - b.y), k: vue.k }; }
+  if (pointeurs.size === 1) aGlisse = false;
+  reprendre();
 });
 svg.addEventListener("pointermove", e => {
   if (!pointeurs.has(e.pointerId)) return;
   pointeurs.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointeurs.size === 2 && pince) {
+    // La carte suit le milieu des deux doigts et zoome autour de lui
     const [a, b] = [...pointeurs.values()];
-    zoomerEn((a.x + b.x) / 2, (a.y + b.y) / 2, borneK(pince.k * Math.hypot(a.x - b.x, a.y - b.y) / pince.d) / vue.k); aGlisse = true; return;
+    const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    vue.x += mx - pince.mx; vue.y += my - pince.my;
+    zoomerEn(mx, my, d / pince.d);
+    pince = { d, mx, my }; aGlisse = true; return;
   }
   if (depart) {
     const dx = e.clientX - depart.x, dy = e.clientY - depart.y;
@@ -493,8 +503,9 @@ svg.addEventListener("pointermove", e => {
   }
 });
 const fin = e => {
-  pointeurs.delete(e.pointerId); if (pointeurs.size < 2) pince = null;
-  if (!pointeurs.size) { depart = null; svg.classList.remove("glisse"); setTimeout(() => { aGlisse = false; }, 0); }
+  if (!pointeurs.delete(e.pointerId)) return;
+  if (pointeurs.size) return reprendre();
+  depart = null; pince = null; svg.classList.remove("glisse"); setTimeout(() => { aGlisse = false; }, 0);
 };
 svg.addEventListener("pointerup", fin); svg.addEventListener("pointercancel", fin);
 document.getElementById("z-plus").addEventListener("click", () => zoomerEn(innerWidth / 2, innerHeight / 2, 1.3));
@@ -508,7 +519,9 @@ document.getElementById("theme").addEventListener("click", () => {
 
 if (innerWidth <= 760) document.getElementById("plus").open = false;
 document.getElementById("plus").addEventListener("toggle", () => toutVoir());
-addEventListener("resize", () => toutVoir());
+// Sur téléphone, la barre d'adresse qui apparaît ou disparaît change la hauteur : on ne recadre que si la largeur change
+let largeur = innerWidth;
+addEventListener("resize", () => { if (innerWidth === largeur) return; largeur = innerWidth; toutVoir(); });
 toutVoir();
 if (document.fonts) document.fonts.ready.then(() => toutVoir());
 </script>
