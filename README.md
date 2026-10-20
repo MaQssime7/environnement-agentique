@@ -18,6 +18,7 @@ flowchart LR
     B --> X["/investigue<br/>dès qu'un bug apparaît"]
     B --> F["/cloture<br/>fin de phase"]
     F -->|phase suivante| B
+    F -->|toutes les phases clôturées| S["/security-audit<br/>avant la mise en ligne"]
 ```
 
 ## La chaîne
@@ -38,6 +39,17 @@ En amont, facultatif : [`/interroge`](skills/interroge/SKILL.md) pour faire mûr
 | Après chaque gros bloc de code | `/code-review` (intégré à Claude Code) | Une relecture des défauts de comportement et de sécurité avant d'annoncer que c'est fini. |
 | Dès qu'un bug apparaît | [`/investigue`](skills/investigue/SKILL.md) | Bug reproduit, cause prouvée, correctif minimal, symptôme rejoué. Autonome, sauf avant un correctif irréversible. |
 | À la fin de chaque phase | [`/cloture`](skills/cloture/SKILL.md) | Chaque critère repris avec sa preuve, test du cloisonnement entre deux comptes, régression de toutes les phases précédentes. |
+
+## Avant la mise en ligne
+
+| Quand | Skill | Ce qu'il garantit |
+|---|---|---|
+| Une fois toutes les phases clôturées, avant d'ouvrir l'app au public | [`/security-audit`](https://github.com/cloudflare/security-audit-skill) (Cloudflare) | Un audit de sécurité de l'application entière. De nombreux agents se répartissent le code et cherchent comment franchir une frontière (compte A vers compte B, visiteur vers administrateur). Chaque faille trouvée est revérifiée par un agent neuf, et seules les failles prouvées reçoivent une gravité. |
+
+- **Différence avec `/code-review` et `/cloture`** : eux relisent un changement ou une phase ; `/security-audit` relit toute l'application, du point de vue d'un attaquant.
+- **Coût** : c'est l'étape la plus chère de la méthode. Il ne se lance donc jamais de lui-même, seulement sur demande explicite.
+- **Limite** : il lit le code et ne touche jamais au site en ligne. Ce qui dépend de l'hébergement (réglages, en-têtes, règles d'accès configurées hors du dépôt) est rangé dans « à vérifier », jamais déclaré sûr.
+- **Produit** : un rapport, le détail de chaque faille avec sa preuve et le plus petit correctif, et la liste de ce qui reste à vérifier.
 
 ## Faire évoluer l'environnement
 
@@ -66,10 +78,12 @@ En amont, facultatif : [`/interroge`](skills/interroge/SKILL.md) pour faire mûr
 
 ## Contenu du dépôt
 
-- `skills/` : les skills, tels que je les utilise. Ils sont là pour être lus.
+- `skills/` : les skills que j'ai écrits, tels que je les utilise. Ils sont là pour être lus. `/security-audit` n'y est pas recopié : il s'installe depuis le dépôt de Cloudflare.
 - `skills/design/scripts/contraste.mjs` : mesure et corrige les contrastes d'un thème (`node contraste.mjs <thème> --corriger sortie.css`).
 - `docs/index.html` : la carte interactive, un seul fichier, sans dépendance.
 
 ## Inspirations
 
 `/interroge` est une adaptation française de [`grill-me`](https://github.com/mattpocock/skills), et `/cadre` et `/planifie` sont partis des skills de PRD et de découpage en tranches verticales du même dépôt de Matt Pocock, avant d'être réécrits pour cette méthode.
+
+`/security-audit` est le skill d'audit publié par [Cloudflare](https://github.com/cloudflare/security-audit-skill) (licence MIT), utilisé tel quel ; seule sa description est traduite en français.
