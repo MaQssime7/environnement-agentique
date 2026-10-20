@@ -21,8 +21,10 @@
   --l-qualite: #cf2c42;
   --l-navigation: oklch(0.5325 0.1149 162.04);
   --l-design: #7438d8;
-  --l-documentation: oklch(0.5472 0.1247 77.51);
+  --l-documentation: #eab308;
   --l-evolution: oklch(0.5469 0.0312 265.28);
+  --l-securite: #0a7ea4;
+  --l-suite: var(--muted);
   --shadow: 0 1px 2px rgba(20, 26, 38, .06), 0 12px 32px rgba(20, 26, 38, .10);
   color-scheme: light;
 }
@@ -30,7 +32,7 @@
   :root:not([data-theme="light"]) {
     --bg: #0d1321; --surface: #161f33; --ink: #e8ecf4; --muted: #9aa4b8; --hair: #2a3550; --dot: #222c42;
     --l-construction: #6b88ff; --l-qualite: #ff6276; --l-navigation: #2fc48d; --l-design: #a982ff;
-    --l-documentation: #f2b832; --l-evolution: #8f99ad;
+    --l-documentation: #ffd60a; --l-evolution: #8f99ad; --l-securite: #3cc8f0;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px rgba(0, 0, 0, .45);
     color-scheme: dark;
   }
@@ -38,7 +40,7 @@
 :root[data-theme="dark"] {
   --bg: #0d1321; --surface: #161f33; --ink: #e8ecf4; --muted: #9aa4b8; --hair: #2a3550; --dot: #222c42;
   --l-construction: #6b88ff; --l-qualite: #ff6276; --l-navigation: #2fc48d; --l-design: #a982ff;
-  --l-documentation: #f2b832; --l-evolution: #8f99ad;
+  --l-documentation: #ffd60a; --l-evolution: #8f99ad; --l-securite: #3cc8f0;
   --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px rgba(0, 0, 0, .45);
   color-scheme: dark;
 }
@@ -90,7 +92,7 @@ svg#carte.glisse { cursor: grabbing; }
 .trace.gaine { stroke: var(--bg); stroke-width: 22; }
 .trace.ligne { stroke-width: 12; }
 .trace.facultatif { stroke-dasharray: 2 16; }
-.ligne-titre { font-weight: 800; font-size: 22px; }
+.ligne-titre { font-weight: 800; font-size: 26px; }
 .station { cursor: pointer; }
 .station .cible { fill: transparent; }
 .station .rond { fill: var(--surface); stroke-width: 6; }
@@ -103,7 +105,6 @@ svg#carte.glisse { cursor: grabbing; }
 .station:focus-visible .anneau { stroke: var(--l-construction); stroke-width: 3; }
 .anneau { fill: none; stroke: transparent; }
 .station.choisie .rond { stroke-width: 10; }
-.note { font: italic 400 17px "Overpass", sans-serif; fill: var(--muted); }
 #monde .station, #monde .trace, #monde text { transition: opacity .2s; }
 #monde .terne { opacity: .14; }
 
@@ -198,18 +199,21 @@ svg#carte.glisse { cursor: grabbing; }
 const DEPOT = "https://github.com/MaQssime7/environnement-agentique/blob/main/skills/";
 
 const LIGNES = [
-  { id: "construction", nom: "Construction", detail: "Du cadrage à la mise en ligne",
-    traces: ["M360,420 H1560"], pointilles: ["M140,420 H360"], titre: [140, 520] },
-  { id: "qualite", nom: "Qualité et sécurité", detail: "La boucle de chaque phase",
-    traces: ["M1100,420 V680 L1180,760 H1320 L1400,680 V600 H1280 Z"], titre: [1420, 770] },
+  { id: "construction", nom: "Construction", detail: "Du cadrage à la phase construite",
+    traces: ["M360,420 H1100"], pointilles: ["M140,420 H360"], titre: [140, 520] },
+  { id: "qualite", nom: "Qualité", detail: "La boucle de chaque phase",
+    traces: ["M1100,420 V520 A110,110 0 0 0 1100,740 A110,110 0 0 0 1100,520"], titre: [1250, 730] },
+  { id: "securite", nom: "Sécurité", detail: "Avant la mise en ligne",
+    traces: ["M1100,420 H1400"], titre: [1190, 476] },
+  { id: "suite", nom: "Après l'audit", cachee: true, traces: [], pointilles: ["M1400,420 H1660"] },
   { id: "design", nom: "Outils de design", detail: "Palette, composants, écrans",
-    traces: ["M600,420 V830"], titre: [470, 900] },
+    traces: ["M600,420 V830"], titre: [600, 900, "middle"] },
   { id: "navigation", nom: "Outils de navigation", detail: "Regarder l'app et le web",
     traces: ["M1100,420 V260 L980,140 H500"], titre: [500, 236] },
   { id: "documentation", nom: "Documentation", detail: "Les bibliothèques à jour",
-    traces: ["M1100,420 L1220,300 H1330"], titre: [1250, 250] },
+    traces: ["M1100,420 L1300,220"], titre: [1300, 164, "middle"] },
   { id: "evolution", nom: "Faire évoluer l'environnement", detail: "Nouveaux skills, changement d'agent",
-    traces: ["M140,780 H420"], titre: [120, 730] },
+    traces: ["M140,780 H420"], titre: [280, 730, "middle"] },
 ];
 
 const STATIONS = [
@@ -230,29 +234,33 @@ const STATIONS = [
     corps: [["Rôle", "Tranche seul l'architecture (stack, schéma de données, autorisation, secrets), puis découpe le PRD en tranches verticales : chaque phase traverse toutes les couches et se montre seule."],
             ["Produit", "docs/PLAN.md : critères d'acceptation, dont les cinq états de chaque écran (vide, chargement, erreur, débordé, action en cours), contenu de test réaliste et parcours de régression cumulatifs."],
             ["Le point de contrôle humain", "Un compte rendu court à la fin : chaque décision, pourquoi, ce que coûterait d'en changer plus tard, ce qui coûtera de l'argent. Rien n'est encore installé, contester coûte une ligne."]] },
-  { id: "construction", l: "construction", x: 1100, y: 420, type: "correspondance", grande: true, pos: "basgauche", nom: "phase n", sous: "Construction",
+  { id: "construction", l: "construction", x: 1100, y: 420, type: "correspondance", grande: true, pos: "basgauche", nom: "phase N", sous: "Construction",
     corps: [["Rôle", "L'IA construit la phase du plan. Chaque écran est ouvert et regardé dès qu'il existe : 375 px de large, mode sombre, états, console sans erreur."],
             ["Règles qui s'appliquent", "Documentation vérifiée avant tout usage nouveau d'une bibliothèque. Composants assemblés à partir de ceux nommés dans DESIGN.md avant d'en écrire un nouveau. Tout serveur ou navigateur lancé est arrêté avant de rendre la main."],
             ["Ensuite", "La boucle qualité : /code-review après chaque gros bloc, /investigue dès qu'un bug apparaît, /cloture quand la phase est finie, puis phase suivante. Une fois toutes les phases clôturées : /security-audit, avant la mise en ligne."]] },
 
-  { id: "code-review", l: "qualite", x: 1100, y: 580, pos: "gauche", nom: "/code-review", sous: "Relecture", lien: "https://docs.claude.com/en/docs/claude-code", lienTexte: "Commande intégrée à Claude Code",
+  { id: "code-review", l: "qualite", x: 990, y: 630, pos: "gauche", nom: "/code-review", sous: "Relecture", lien: "https://docs.claude.com/en/docs/claude-code", lienTexte: "Commande intégrée à Claude Code",
     corps: [["Rôle", "Relit le changement en cours et cherche ce qui pourrait casser : défauts de comportement, de sécurité, de performance."],
             ["Quand", "Après chaque gros bloc : une fonctionnalité conséquente, du code qui lit ou écrit en base, gère un accès ou un paiement."],
             ["Produit", "Des constats classés par gravité, rapportés sans filtre avant d'annoncer que c'est terminé."]] },
-  { id: "investigue", l: "qualite", x: 1250, y: 760, pos: "dessous", nom: "/investigue", sous: "Bug", fichier: "investigue",
+  { id: "investigue", l: "qualite", x: 1100, y: 740, pos: "dessous", nom: "/investigue", sous: "Bug", fichier: "investigue",
     corps: [["Rôle", "Part d'un symptôme et remonte à sa cause : reproduire, prouver la cause par une observation, corriger au plus court, rejouer le scénario, retirer toute trace de débogage."],
             ["Autonomie", "Aucune question technique à l'humain. Un seul arrêt : avant un correctif qui ne se défait pas d'un retour en arrière du code (données réelles, droits d'accès, paiement)."],
             ["Différence avec /code-review", "/code-review cherche ce qui pourrait casser dans un changement ; /investigue part de ce qui est déjà cassé. Sa preuve, c'est le symptôme rejoué qui a disparu."]] },
-  { id: "cloture", l: "qualite", x: 1400, y: 640, pos: "droite", nom: "/cloture", sous: "Fin de phase", fichier: "cloture",
+  { id: "cloture", l: "qualite", x: 1210, y: 630, pos: "droite", nom: "/cloture", sous: "Fin de phase", fichier: "cloture",
     corps: [["Rôle", "Vérifie qu'une phase est réellement finie : critères d'acceptation repris un par un avec leur preuve, app regardée sur mobile et bureau, en clair et en sombre, avec un contenu réaliste."],
             ["Sécurité", "Test des deux comptes : une ressource du compte A ne doit jamais s'ouvrir avec le compte B. Un échec bloque la clôture. Puis secrets, revue de code et parcours de régression de toutes les phases précédentes."],
             ["Produit", "Un rapport en trois parties jamais mélangées (vérifié, non vérifié, cassé), puis les traces : plan coché, parcours ajoutés, commit proposé."]] },
-  { id: "security-audit", l: "construction", x: 1560, y: 420, pos: "dessus", nom: "/security-audit", sous: "Avant la mise en ligne", lien: "https://github.com/cloudflare/security-audit-skill", lienTexte: "Le skill sur le dépôt de Cloudflare",
+  { id: "security-audit", l: "securite", x: 1400, y: 420, pos: "dessus", nom: "/security-audit", sous: "Avant la mise en ligne", lien: "https://github.com/cloudflare/security-audit-skill", lienTexte: "Le skill sur le dépôt de Cloudflare",
     corps: [["Rôle", "Audit de sécurité de l'application entière, selon la méthode publiée par Cloudflare. De nombreux agents se répartissent le code et cherchent comment franchir une frontière : compte A vers compte B, visiteur vers administrateur. Chaque faille trouvée est revérifiée par un agent neuf ; seules les failles prouvées reçoivent une gravité."],
             ["Quand", "Une fois toutes les phases clôturées, avant d'ouvrir l'app au public. Jamais de lui-même : c'est l'étape la plus chère de la méthode, il se lance sur demande explicite."],
             ["Différence avec /code-review et /cloture", "Eux relisent un changement ou une phase. /security-audit relit toute l'application, du point de vue d'un attaquant."],
             ["Limite", "Il lit le code et ne touche jamais au site en ligne. Ce qui dépend de l'hébergement (réglages, en-têtes, règles d'accès configurées hors du dépôt) est rangé dans « à vérifier », jamais déclaré sûr."],
             ["Produit", "Un rapport, le détail de chaque faille avec sa preuve et le plus petit correctif, et la liste de ce qui reste à vérifier."]] },
+  { id: "deploiement", l: "suite", x: 1660, y: 420, pos: "dessus", nom: "Déploiement", sous: "Mise en ligne",
+    corps: [["Rôle", "L'app est publiée sur son hébergement et ouverte au public."],
+            ["Quand", "Une fois l'audit passé et ses failles corrigées."],
+            ["Ce qui se vérifie ici", "Ce que l'audit a laissé « à vérifier » parce que ça ne vit pas dans le code (réglages de l'hébergement, en-têtes, règles d'accès) se contrôle sur le site en ligne."]] },
 
   { id: "tweakcn", l: "design", x: 600, y: 570, pos: "droite", nom: "tweakcn", sous: "Choisir la palette", lien: "https://tweakcn.com", lienTexte: "tweakcn.com",
     corps: [["Rôle", "Éditeur de thèmes qui montre une palette en direct sur de vrais composants (cartes, tableau de bord, formulaires), en clair et en sombre. C'est là que l'humain choisit."],
@@ -274,7 +282,7 @@ const STATIONS = [
     corps: [["Rôle", "Prend des captures d'écran du Mac et pilote ses applications (Finder, réglages, apps natives) au clavier et à la souris."],
             ["Règle", "En dernier recours, quand ni un outil dédié ni le navigateur ne conviennent."]] },
 
-  { id: "context7", l: "documentation", x: 1330, y: 300, pos: "droite", nom: "Context7", sous: "Doc à jour", lien: "https://context7.com", lienTexte: "context7.com",
+  { id: "context7", l: "documentation", x: 1300, y: 220, pos: "droite", nom: "Context7", sous: "Documentation à jour", lien: "https://context7.com", lienTexte: "context7.com",
     corps: [["Rôle", "Donne la documentation à jour des bibliothèques qui changent vite (Next.js, Supabase, Stripe, shadcn…)."],
             ["Règle", "Consultée avant tout usage nouveau d'une bibliothèque, ou quand une erreur pointe vers son API, une fois par sujet et par session. La connaissance d'un modèle a une date limite ; le risque est maximal quand il croit savoir."]] },
 
@@ -310,13 +318,13 @@ const PRINCIPES = [
 const RELIES = {
   interroge: ["cadre"], cadre: ["interroge", "design"], design: ["cadre", "planifie", "tweakcn", "shadcn", "canevas", "chrome"],
   planifie: ["design", "construction"], construction: ["planifie", "code-review", "investigue", "cloture", "security-audit", "playwright", "context7"],
-  "code-review": ["construction", "cloture"], investigue: ["construction"], cloture: ["construction", "playwright", "code-review", "security-audit"], "security-audit": ["construction", "cloture"],
+  "code-review": ["construction", "cloture"], investigue: ["construction"], cloture: ["construction", "playwright", "code-review", "security-audit"], "security-audit": ["construction", "cloture", "deploiement"], deploiement: ["security-audit"],
   tweakcn: ["design"], shadcn: ["design"], canevas: ["design"],
   playwright: ["construction", "cloture"], chrome: ["design", "cherche-skill"], computer: ["construction"],
   context7: ["construction"], "cherche-skill": ["chrome"], passation: ["construction"],
 };
 // La station de la ligne Construction où chaque ligne se branche
-const BRANCHE = { design: "design", qualite: "construction", navigation: "construction", documentation: "construction" };
+const BRANCHE = { design: "design", qualite: "construction", securite: "construction", navigation: "construction", documentation: "construction" };
 
 const NS = "http://www.w3.org/2000/svg";
 const el = (t, a = {}, parent) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (parent) parent.appendChild(e); return e; };
@@ -332,11 +340,10 @@ for (const l of LIGNES) {
   for (const d of [...l.traces, ...(l.pointilles || [])]) el("path", { class: "trace gaine", d }, gG);
   for (const d of l.traces) tracesDe[l.id].push(el("path", { class: "trace ligne", d, stroke: couleur(l.id) }, gL));
   for (const d of l.pointilles || []) tracesDe[l.id].push(el("path", { class: "trace ligne facultatif", d, stroke: couleur(l.id) }, gL));
-  const t = el("text", { class: "ligne-titre", x: l.titre[0], y: l.titre[1], fill: couleur(l.id) }, gN); t.textContent = l.nom;
+  if (!l.titre) continue;
+  const t = el("text", { class: "ligne-titre", x: l.titre[0], y: l.titre[1], fill: couleur(l.id), "text-anchor": l.titre[2] || "start" }, gN); t.textContent = l.nom;
   tracesDe[l.id].push(t);
 }
-const retour = el("text", { class: "note", x: 1300, y: 586 }, gN); retour.textContent = "phase suivante";
-tracesDe.qualite.push(retour);
 
 // Stations
 const gS = document.getElementById("stations"), stationEl = {};
@@ -366,7 +373,7 @@ function estomper(stations, lignes) {
 // Panneau gauche : les lignes (cliquer isole une ligne) et les principes
 const listeL = document.getElementById("liste-lignes");
 let ligneIsolee = null;
-for (const l of LIGNES) {
+for (const l of LIGNES.filter(l => !l.cachee)) {
   const li = document.createElement("li"); const b = document.createElement("button");
   b.type = "button"; b.setAttribute("aria-pressed", "false");
   const barre = document.createElement("span"); barre.className = "barre"; barre.style.background = couleur(l.id);
@@ -399,7 +406,7 @@ const fiche = document.getElementById("fiche");
 let retourFocus = null;
 function remplir({ ligne, titre, cmd, corps, relies, source, sourceTexte }) {
   const fl = document.getElementById("f-ligne"); fl.replaceChildren();
-  if (ligne) { const b = document.createElement("span"); b.className = "barre"; b.style.background = couleur(ligne); fl.append(b, document.createTextNode("Ligne " + ligneDe[ligne].nom)); }
+  if (ligne) { const b = document.createElement("span"); b.className = "barre"; b.style.background = couleur(ligne); fl.append(b, document.createTextNode(ligneDe[ligne].cachee ? ligneDe[ligne].nom : "Ligne " + ligneDe[ligne].nom)); }
   else fl.textContent = "Principe";
   document.getElementById("f-titre").textContent = titre;
   const c = document.getElementById("f-cmd"); c.textContent = cmd || ""; c.hidden = !cmd;

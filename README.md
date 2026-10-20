@@ -13,12 +13,13 @@ flowchart LR
     I["/interroge<br/>idée"] -.-> C["/cadre<br/>PRD"]
     C --> D["/design<br/>système et écrans"]
     D --> P["/planifie<br/>plan en phases"]
-    P --> B["Construction<br/>phase n"]
+    P --> B["Construction<br/>phase N"]
     B --> R["/code-review<br/>après chaque gros bloc"]
     B --> X["/investigue<br/>dès qu'un bug apparaît"]
     B --> F["/cloture<br/>fin de phase"]
     F -->|phase suivante| B
     F -->|toutes les phases clôturées| S["/security-audit<br/>avant la mise en ligne"]
+    S --> M["Déploiement<br/>mise en ligne"]
 ```
 
 ## La chaîne
